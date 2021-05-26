@@ -1,0 +1,350 @@
+public final class AccuWeatherAPI {
+
+    public final List<Map<String, Object>> getWeather(String ciudad) {
+		return Arrays.asList(new HashMap<String, Object>(){{
+			put("DateTime", "2019-05-03T01:00:00-03:00");
+			put("EpochDateTime", 1556856000);
+			put("WeatherIcon", 33);
+			put("IconPhrase", "Clear");
+			put("IsDaylight", false);
+			put("PrecipitationProbability", 0);
+			put("MobileLink", "http://m.accuweather.com/en/ar/villa-vil/7984/");
+			put("Link", "http://www.accuweather.com/en/ar/villa-vil/7984");
+			put("Temperature", new HashMap<String, Object>(){{
+				put("Value", 57);
+				put("Unit", "F");
+				put("UnitType", 18);
+			}});
+		}});
+	}
+}
+
+interface ServicioMeteorologico {
+    Map<String, Object> consultarApi(String direccion);
+}
+
+class ServicioMeteorologicoAccuWeather implements ServicioMeteorologico{
+    private Map<String, Object> ultimaRespuesta;
+    private LocalDateTime proximaExpiracion;
+
+    private AccuWeatherAPI api;
+    private Duration expiracion;
+    private String direccion;
+
+    public ServicioMeteorologicoAccuWeather(AccuWeatherAPI api, Duration periodoDeValidez, String direccion){
+        this.api = api;
+        this.expiracion = periodoDeValidez;
+        this.direccion = direccion;
+    }
+
+    public Map<String, Object> obtenerCondicionesClimaticas(String direccion) {
+        if (this.ultimaRespuesta == null || this.expiro()) {
+            this.ultimaRespuesta = consultarApi(direccion);
+            this.proximaExpiracio = LocalDateTime.now().plus(this.expiracion); 
+        }
+        return this.ultimaRespuesta;
+    }  
+  
+    private boolean expiro() {
+        return proximaExpiracion.isAfter(DateTime.now);
+    }
+
+    public Map<String, Object> consultarApi(String lugar) {
+        AccuWeatherAPI apiClima = new AccuWeatherAPI();
+        List<Map<String, Object>> condicionesClimaticas = apiClima.getWeather(lugar);
+        return condicionesClimaticas.get(0).get('Temperature').get('Value');
+    }
+}
+
+class AsesorDeImagen {
+    private ServicioMeteorologico servicioMeteorologico;
+
+    public AsesorDeImagen (AccuWeatherAPI api) {
+        this.servicioMeteorologico = api;
+    }
+
+    public Atuendo sugerirAtuendo(String direccion, Guardarropas guardarropas) {
+        return guardarropas.sugerencia(servicioMeteorologico.obtenerCondicionesClimaticas(direccion));
+    }
+}
+
+class Atuendo {
+    private Prenda calzado;
+    private Prenda parteInferior;
+    private Prenda parteSuperior;
+    private List<Prenda> accesorios;
+
+    public Boolean esAptaTemperatura(Integer temperatura) {
+        return calzado.esApta(temperatura) && parteInferior.esApta(temperatura) && parteSuperior.esApta(temperatura) && accesorios.all(accesorio -> accesorio.esApta(temperatura));
+    }
+}
+
+enum CriterioGuardarropas {
+    VIAJE,
+    ENTRECASA,
+    FORMAL,
+    EVENTO
+}
+
+class Guardarropas {
+    CriterioGuardarropas criterio;
+    List<Prenda> prendas;
+    List<Usuarios> listaDeUsuarios;
+
+    public Guardarropas (CriterioGuardarropas criterio) {
+        this.criterio = criterio;
+    }
+
+    public verificarPermisosUsuarios(Usuario usuario) {
+        if(!listaDeUsuarios.contains(usuario)) {
+            throw new UsuarioNoPermitidoException();
+        }
+    }
+
+    public void agregarUsuario(Usuario usuarioAAgregar) {
+        listaDeUsuarios.add(usuarioAAgregar);
+    }
+
+    public getCriterio() {
+        return criterio;
+    }
+
+    public void cargarPrenda(Prenda prenda, Usuario usuario) {
+        verificarPermisosUsuarios(usuario);
+        prendas.add(prenda);
+    }
+
+    public filtrarPorCategoriaYTemperatura(Categoria categoria, Integer temperatura){
+        return prendas.filter(prenda -> prenda.categoria == categoria && prenda.temperatura < temperatura);
+    }
+
+    public Atuendo sugerencia(Integer temperatura){
+        return new Atuendo(
+            prendas.filtrarPorCategoriaYTemperatura(CALZADO, temperatura).random(),
+            prendas.filtrarPorCategoriaYTemperatura(PARTE_INFERIOR, temperatura).random(),
+            prendas.filtrarPorCategoriaYTemperatura(PARTE_SUPERIOR, temperatura).random(),
+            prendas.filtrarPorCategoriaYTemperatura(ACCESORIO, temperatura).random()
+        )
+    }
+}
+
+class Color {
+    private int red;
+    private int green;
+    private int blue;
+
+    Color(int red; int green; int blue) {
+        this.red = red;
+        this.green = green;
+        this.blue = blue;
+    }
+}
+
+class TipoDePrenda(){
+    Categoria categoria;
+
+    public TipoDePrenda(Categoria categoria) {
+        this.categoria = categoria;
+    }
+
+    public categoria() {
+        return this.categoria;
+    }
+
+    constant ZAPATO = new TipoDePrenda(CALZADO)
+    constant REMERA = new TipoDePrenda(PARTE_SUPERIOR)
+    constant PANTALON = new TipoDePrenda(PARTE_INFERIOR)
+}
+
+enum Trama {
+    LISA,
+    RAYADA,
+    LUNARES,
+    CUADROS,
+    ESTAMPADO
+}
+
+class Prenda {
+    private Categoria categoria;
+    private Tipo tipoPrenda;
+    private String tela;
+    private Color colorPrimario;
+    private Color colorSecundario;
+    private Trama tramaTela = Trama.LISA;
+    private Integer temperaturaMax;
+
+    Prenda(Tipo tipo, String tela, Color colorP, Color colorS, Trama trama, Integer temperatura) {
+        this.tipoPrenda = tipo;
+        this.tela = tela;
+        this.colorPrimario = colorP;
+        this.colorSecundario = colorS;
+        this.trama = trama;
+        this.temperaturaMax = temperatura;
+    }
+
+    public setTrama(Trama trama) {
+        this. tramaTela = trama;
+    }
+
+    public setColorS(Color colorS) {
+        this.colorSecundario = colorS;
+    }
+
+    public Boolean esApta(Integer temperatura) {
+        return this.temperaturaMax < temperatura;
+    }
+
+}
+
+class Borrador {
+    private TipoDePrenda tipoPrenda;
+    private String tela;
+    private Color colorPrimario;
+    private Color colorSecundario;
+    private Trama tramaTela = Trama.LISA;
+    private Integer temperatura;
+
+    public especificarTipo(Tipo){
+        this.tipoPrenda = tipo;
+        return this;
+    }
+
+    public especificarTela(Tela) {
+        if(!tipo.materialesConsistentes().contains(tela)){
+            throw new tipoYMaterialNoConsistenteException();
+        }
+        this.tela = tela;
+        return this;
+    }
+
+    public especificarColorPrimario(Color){
+        this.colorPrimario = colorP;
+        return this;
+    }
+
+    public especificarColorSecundario(Color){
+        this.colorSecundario = colorS;
+        return this;
+    }
+
+    public especificarTrama(Trama){
+        if(trama != NULL){
+            this.tramaTela = trama;
+        }
+        return this;
+    }
+
+    public especificarTemperatura(Integer){
+        this.tem-peratura = temperatura;
+        return this;
+    }
+
+    public crearPrenda() {
+        return new Prenda(tipoPrenda, tela, colorPrimario, colorSecundario, tramaTela, temperatura);
+    }
+}
+
+enum Categoria {
+    CALZADO,
+    PARTE_INFERIOR,
+    PARTE_SUPERIOR,
+    ACCESORIO
+}
+
+class PropuestaAgregar implements Propuesta {
+    private Usuario usuario;
+    private Prenda prenda;
+
+    aplicaEn(Usuario usuario) {
+        usuario.guardarropas.add(prenda);
+    }
+
+    deshacer(Usuario usuario) {
+        usuario.guardarropas.remove(prenda);
+    }
+}
+
+class PropuestaEliminar implements Propuesta{
+    private Usuario usuario;
+    private Prenda prenda;
+
+    aplicaEn(Usuario usuario) {
+        usuario.guardarropas.remove(prenda);
+    }
+
+    deshacer(Usuario usuario) {
+        usuario.guardarropas.add(prenda);
+    }
+}
+
+interface Propuesta{ 
+    aplicarEn(Usuario usuario);
+    deshacerEn(Usuario usuario);
+}
+
+class Usuario {
+    private Atuendo atuendo;
+    private List<Guardarropas> guardarropas;
+    private Map<String, Object> ultimaConsulta;
+    private AsesorDeImagen asesorDeImagen;
+    private List<Propuesta> propuestas;
+    private List<Propuesta> propuestasAceptadas;
+    
+    public agregarGuardarropas(CriterioGuardarropas criterio) {
+        if(guardarropas.any(guardarropa -> guardarropa.getCriterio() == criterio)){
+            throw new GuardarropaYaCreadoException();
+        }
+
+        guardarropas.add(new Guardarropas(criterio));
+    }
+
+    public void cargarPrendaAGuardarropas(Categoria categoria, TipoDePrenda tipo, Tela tela, Color colorP, Trama trama, CriterioGuardarropas criterio) {
+        if(tipo.categoria() != categoria){
+            throw new TipoNoEsCategoriaException();
+        }
+
+        Prenda prenda = new Borrador()
+                            .especificarTipo(Tipo)
+                            .especificarTela(Tela)
+                            .especificarColorPrimario(colorP)
+                            .especificarColorSecundario(colorS)
+                            .especificarTrama(trama)
+                            .especificarTemperatura(temperatura);
+                            .crearPrenda();
+
+        filtrarGuardarropasPor(criterio).cargarPrenda(prenda, this);
+    }
+
+    public Guardarropas filtrarGuardarropasPor(CriterioGuardarropas criterio) {
+        return guardarropas.filter(guardarropas -> guardarropas.getCriterio() == criterio).findFirst().get();
+    }
+
+    public void sugerenciaPrenda(String lugar){
+        this.atuendo = asesorDeImagen.sugerirAtuendo(lugar, this.guardarropas);
+    }
+
+    public void agregarPropuesta(Propuesta propuesta){
+        this.propuestas.add(propuesta);
+    }
+
+    public void proponerPrendaAAgregar(Usuario usuario, Prenda prenda){
+        usuario.agregarPropuesta(new PropuestaAgregar(usuario, prenda));
+    }
+
+    public void proponerPrendaAEliminar(Usuario usuario, Prenda prenda) {
+        usuario.agregarPropuesta(new PropuestaEliminar(usuario, prenda));
+    }
+
+    public void efectivizarPropuesta(Propuesta propuesta, Boolean estado) {
+        if(estado){
+            propuesta.aplicarEn(this);
+            this.propuestasAceptadas.add(propuesta);
+        }else{
+            propuestas.remove(propuesta);
+        }
+    }
+
+    public void deshacerPropuestaAceptada(Propuesta propuesta) {
+        propuesta.deshacer(this);
+    }
+}
